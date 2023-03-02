@@ -1,0 +1,166 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devops
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    app: jenkins-deployment
+  name: jenkins
+  namespace: devops
+spec:
+  replicas: 1
+#  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: jenkins-pod
+  template:
+    metadata:
+      labels:
+        app: jenkins-pod
+      namespace: devops
+      name: jenkins
+    spec:
+      nodeName: node2
+      containers:
+        - name: jenkins
+          #image: jenkins/jenkins:2.211
+          image: frankyang1988/jenkins-maven:2.332.3-debian-11-r3
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0  #设置以root用户运行容器
+            privileged: true
+          ports:
+            #- containerPort: 30080
+            - containerPort: 8080 #注意，这里必须是8080,不能直接通过它修改默认部署的端口
+              name: web
+              protocol: TCP
+            - containerPort: 30081
+              name: agent
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+             path: /login
+             port: 8080 
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 8080
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 12
+          volumeMounts:
+            - name: jenkins-home
+              #mountPath: /var/lib/jenkins #挂载到容器中的路径
+              mountPath: /bitnami/jenkins/home
+            - name: docker
+              mountPath: /run/docker.sock
+            - name: daemon
+              mountPath: /etc/docker/daemon.json
+              subPath: daemon.json
+            - name: docker-home
+              mountPath: /usr/bin/docker
+          env: #定义全局的环境变量
+            - name: JENKINS_HOME
+              #value: /var/lib/jenkins
+              value: /bitnami/jenkins/home
+            - name: JENKINS_OPTS #指定jenkins的启动端口，jenkins启动时会读系统是否有JENKINS_OPTS这个参数，如果有，就会加上它的值
+              value: --httpPort=8080
+            - name: JENKINS_SLAVE_AGENT_PORT #jenkins的另一种玩法，并不是加到jenkins启动命令，而是加到初始化的groovy文件里（jenkins core api里可定义jenkins初始化的配置，这是一个groovy脚本，调用jenkins的接口. 先了解即可）
+              value: "30081"
+      volumes:
+        - name: jenkins-home
+          #hostPath:
+          #  path: /data/devops/jenkins2 #宿主机路径
+          #  type: Directory
+          nfs:
+            server: nfs
+            path: /root/NFSdata/jenkinshome 
+        - name: docker
+          hostPath:
+            path: /run/docker.sock
+            type: ""
+        - name: docker-home
+          hostPath: 
+            path: /usr/bin/docker
+            type: ""
+        - name: daemon
+          hostPath:
+            path: /etc/docker
+            type: ""
+      serviceAccountName: jenkins
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: jenkins
+  name: jenkins
+  namespace: devops
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: jenkins-service
+  name: jenkins
+  namespace: devops
+spec:
+  type: NodePort
+  ports:
+    - name: web
+      port: 30080 #映射到宿主机给svc使用的端口
+      targetPort: 8080 #容器内的端口
+      nodePort: 30080 #k8s集群外访问的端口
+    - name: slave
+      port: 30081 
+      targetPort: 30081
+      nodePort: 30081
+  selector:
+    app: jenkins-pod
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: jenkins
+  namespace: devops
+rules:
+ - apiGroups: [""]
+   resources: ["pods"]
+   verbs: ["create","delete","get","list","patch","update","watch"]
+ - apiGroups: [""]
+   resources: ["pods/exec"]
+   verbs: ["create","delete","get","list","patch","update","watch"]
+ - apiGroups: [""]
+   resources: ["pods/log"]
+   verbs: ["get","list","watch"]
+ - apiGroups: [""]
+   resources: ["secrets"]
+   verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins
+  namespace: devops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins
+subjects:
+ - kind: ServiceAccount
+   name: jenkins
+   namespace: devops
