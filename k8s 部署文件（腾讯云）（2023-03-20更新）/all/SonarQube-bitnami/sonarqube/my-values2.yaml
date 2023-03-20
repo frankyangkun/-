@@ -1,0 +1,23 @@
+global:
+  storageClass: "sonarqube"
+
+sonarqubeUsername: admin
+sonarqubePassword: "admin"
+
+service:
+  type: NodePort
+
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  hostname: sonarqube.tophant.wang
+
+persistence:
+  enabled: true
+  size: 2Gi
+
+postgresql:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 2Gi
