@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-myapp-deploy
+  name: nginx-myapp-canary
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-myapp-canary
+  template:
+    metadata:
+      labels:
+        app: nginx-myapp-canary
+    spec:
+      containers:
+      - name: nginx
+        image: ikubernetes/myapp:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-canary
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: nginx-myapp-canary
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ingress-canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "30"
+    nginx.ingress.kubernetes.io/canary-by-header: "cityChengdu"
+#    nginx.ingress.kubernetes.io/canary-by-header-value: "Chengdu"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: www.ykingresscanary.com
+    http:
+      paths:
+      - path: /
+        backend:
+          service: 
+            name: nginx-svc-canary
+            port:
+              number: 80
+        pathType: Prefix
