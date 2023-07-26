@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: provider046
+  name: provider046
+  namespace: demo-stag
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: provider046
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: provider046
+      namespace: demo-stag
+    spec:
+      containers:
+      #- image: frankyang1988/046providerdemo:v20220316
+      - image: frankyang1988/microservicedemo2023provider:microservice0413-master-20230629084950
+        name: providerdemo046
+        resources: {}
+status: {}

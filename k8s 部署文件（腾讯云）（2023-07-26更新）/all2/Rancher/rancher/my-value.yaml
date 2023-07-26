@@ -1,0 +1,9 @@
+hostname: master2
+ingress:
+  extraAnnotations:
+    kubernetes.io/ingress.class: "nginx"    
+    kubernetes.io/tls-acme: "true"  
+  tls:
+    source: secret
+    secretName: tls-rancher-ingress
+replicas: 1

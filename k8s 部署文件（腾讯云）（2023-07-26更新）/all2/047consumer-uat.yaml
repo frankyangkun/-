@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: consumer047
+  name: consumer047
+  namespace: demo-uat
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: consumer047
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: consumer047
+      namespace: demo-uat
+    spec:
+      containers:
+      #- image: frankyang1988/047-springboot-dubbo-ssm-consumer:v20220322
+      - image: frankyang1988/microservicedemo2023consumer:microservice0413-master-20230629084950
+        name: springboot-dubbo-ssm-consumer-047
+        resources: {}
+status: {}

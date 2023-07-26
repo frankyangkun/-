@@ -1,7 +1,0 @@
-image:
-  repository: kubernetesui/dashboard
-  tag: v2.0.5
-rbac:
-  create: true
-  clusterRoleMetrics: true
-  clusterReadOnlyRole: false
